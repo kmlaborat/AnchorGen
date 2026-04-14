@@ -1,0 +1,53 @@
+# LLM configuration is ONLY via environment variables:
+# ANCHORGEN_BASE_URL, ANCHORGEN_API_KEY
+# No 'llm' section allowed here.
+#
+# The generator name is used as the model identifier when calling the API.
+# Configure your proxy (e.g., LiteLLM) to route generator names to models.
+
+generators:
+  # fast_apply: apply an update snippet to existing code
+  fast_apply:
+    model: fast-apply-7b
+    inputs:
+      original_code:
+        source: stdin
+      update_snippet:
+        source: cli
+    prompt:
+      template: |
+        system
+        You are a coding assistant that helps merge code updates, ensuring every modification is fully integrated. 
+
+        user
+        Merge all changes from the <update> snippet into the <code> below.
+        - Preserve the code's structure, order, comments, and indentation exactly.
+        - Output only the updated code, enclosed within <updated-code> and </updated-code> tags.
+        - Do not include any additional text, explanations, placeholders, ellipses, or code fences.
+
+        <code>{original_code}</code>
+
+        <update>{update_snippet}</update>
+
+        Provide the complete updated code. 
+
+        assistant
+    extract:
+      type: tag
+      start: "<updated-code>"
+      end: "</updated-code>"
+
+  # apply_translation_e2j: translate text from English to Japanese (input via file content)
+  apply_translation_e2j:
+    model: plamo-translate
+    inputs:
+      source_text:
+        source: stdin
+    prompt:
+      template: "<|plamo:op|>dataset
+translation
+<|plamo:op|>input lang=English
+{source_text}
+<|plamo:op|>output lang=Japanese"
+    extract:
+      type: identity
