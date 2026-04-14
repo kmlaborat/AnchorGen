@@ -2,3 +2,6 @@
 # Build artifacts
 /target/
 
+
+# Plans directory
+docs/plans/
