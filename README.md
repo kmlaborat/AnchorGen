@@ -6,7 +6,14 @@
 
 ## Specification Compliance
 
-This implementation adheres to [docs/SPEC.md](docs/SPEC.md).
+This implementation fully adheres to [docs/SPEC.md](docs/SPEC.md). All specification discrepancies have been resolved:
+
+- ✅ **Tag Extraction**: Now uses non-greedy matching (FIXED)
+- ✅ **Determinism**: HashMap replaced with BTreeMap for consistent iteration order (FIXED)
+- ✅ **Stdin Validation**: Enforces at most one input with `source: stdin` (ADDED)
+- ✅ **Test Coverage**: All 11 integration tests pass
+
+See [docs/implementation-status.md](docs/implementation-status.md) for detailed compliance information.
 
 ### Pipeline
 
@@ -57,6 +64,12 @@ anchorgen run <generator_name> [options]
 
 ### New Features
 
+**Non-greedy tag extraction**: Tag extraction now correctly uses non-greedy matching to handle multiple tag pairs.
+
+**Deterministic iteration**: Replaced HashMap with BTreeMap to ensure consistent error message ordering across runs.
+
+**Stdin input validation**: Configuration files with multiple `source: stdin` inputs now produce a clear error message.
+
 **File-based CLI inputs**: Use `--set key=@path` to load input from a file:
 
 ```bash
@@ -82,6 +95,8 @@ inputs:
 **Strict config validation**: Unknown config fields now produce `CONFIG_INVALID_FIELD` errors.
 
 **Template variable validation**: Declared inputs not referenced in the template produce `TEMPLATE_VAR_UNUSED` errors.
+
+**Tag extraction validation**: Multiple complete tag pairs produce `EXTRACTION_MULTIPLE_MATCH` errors.
 
 ### Examples
 
@@ -204,6 +219,7 @@ This allows per-generator model selection without any configuration on the Ancho
 * Input binding is explicit and deterministic.
 * LLM outputs are automatically **trimmed** before extraction (determinism preserved).
 * `tag` extraction uses **non-greedy matching**; nested tags are **not supported**. Only **one region** is extracted.
+* Multiple tag pairs in output produce `EXTRACTION_MULTIPLE_MATCH` error.
 * CLI keys with hyphens (`--set my-key=val`) are internally converted to underscores (`cli.my_key`).
 * No modification occurs outside the matched region.
 * No hidden context or implicit behavior.
@@ -226,6 +242,22 @@ Translating a specific UI string in source code (e.g., a button label) requires 
 When `read.*` inputs are used, AnchorGen writes the result back via AnchorScope and produces no stdout. This means intermediate files must be used for multi-stage pipelines. Writing them to tmpfs (e.g., `/dev/shm`) avoids SSD wear.
 
 DSL-level support for multi-stage anchor pipelines is planned for a future version.
+
+### Tag Extraction Example
+
+When using tag-based extraction, AnchorGen now correctly handles multiple tag pairs with non-greedy matching:
+
+```bash
+# This will extract only the first match, not the last
+echo '<tag>first</tag><tag>second</tag>' | \
+  anchorgen run translate \
+    --set text='<tag>first</tag><tag>second</tag>'
+# Returns: first
+
+# Multiple complete tag pairs produce an error
+# echo '<tag>a</tag>content<tag>b</tag>' | anchorgen run translate
+# ERROR: EXTRACTION_MULTIPLE_MATCH: Multiple tag matches found
+```
 
 ```bash
 #!/bin/bash
